@@ -1,177 +1,1 @@
-# TechCosmos Input System
-
-Ò»¸öÁé»î¡¢ÀàĞÍ°²È«µÄ Unity ÊäÈë¹ÜÀíÏµÍ³£¬Ö§³ÖÎŞ²ÎºÍ´ø²ÎµÄÃüÁî×¢²áÓëÖ´ĞĞ¡£
-
-## ¹¦ÄÜÌØĞÔ
-
-- ? **Ë«Ä£Ê½Ö§³Ö**£ºÎŞ²Î¶¯×÷ºÍ·ºĞÍ´ø²Î¶¯×÷
-- ? **¶àÖÖÊäÈëÀàĞÍ**£ºKeyDown¡¢KeyUp¡¢KeyHold
-- ? **ÀàĞÍ°²È«**£º·ºĞÍ·½·¨È·±£²ÎÊıÀàĞÍÆ¥Åä
-- ? **ÅúÁ¿²Ù×÷**£ºÖ§³ÖÅúÁ¿×¢ÏúÃüÁî
-- ? **Òì³£´¦Àí**£ºÍêÉÆµÄ´íÎóÌáÊ¾ºÍÒì³£²¶»ñ
-- ? **Áé»îÖ´ĞĞ**£ºÖ§³Ö×Ô¶¯¼ì²âÊäÈëºÍÊÖ¶¯´¥·¢ÃüÁî
-
-## ¿ìËÙ¿ªÊ¼
-
-### »ù±¾ÓÃ·¨
-
-```csharp
-using TechCosmos.InputSystem;
-using TechCosmos.InputSystem.Structs;
-using UnityEngine;
-
-public class PlayerController : MonoBehaviour
-{
-    private InputSystem _inputSystem;
-
-    private void Start()
-    {
-        _inputSystem = new InputSystem();
-        
-        // ×¢²áÎŞ²ÎÃüÁî
-        _inputSystem.RegisterCommand("Jump", KeyCode.Space, OnJump, InputType.KeyDown);
-        
-        // ×¢²á´ø²ÎÃüÁî
-        _inputSystem.RegisterCommand("Move", KeyCode.W, OnMove, () => 1.0f, InputType.KeyHold);
-    }
-
-    private void Update()
-    {
-        _inputSystem.UpdateInput();
-    }
-
-    private void OnJump()
-    {
-        Debug.Log("Íæ¼ÒÌøÔ¾£¡");
-    }
-
-    private void OnMove(float speed)
-    {
-        Debug.Log($"ÒÔËÙ¶È {speed} ÒÆ¶¯");
-    }
-}
-```
-
-### ¸ß¼¶ÓÃ·¨
-
-```csharp
-// ÊÖ¶¯´¥·¢ÃüÁî
-_inputSystem.ExecuteCommand("Jump");
-_inputSystem.ExecuteCommand("Shoot", new BulletParams { Damage = 10 });
-
-// ÅúÁ¿×¢Ïú
-_inputSystem.UnRegisterCommand("Jump", "Move", "Shoot");
-
-// ¼ì²éÃüÁîÊÇ·ñ×¢²á
-bool isRegistered = _inputSystem.IsCommandRegistered("Jump");
-
-// Ö±½Ó¼ì²â°´¼ü
-bool isKeyPressed = _inputSystem.DetectKeyDownInput(KeyCode.Escape);
-```
-
-## API ÎÄµµ
-
-### ºËĞÄÀà£º`InputSystem`
-
-#### Î¯ÍĞÀàĞÍ
-- `InputAction` - ÎŞ²Î¶¯×÷Î¯ÍĞ
-- `InputAction<T>` - ´ø²Î¶¯×÷Î¯ÍĞ
-
-#### Ö÷Òª·½·¨
-
-**×¢²áÃüÁî**
-```csharp
-// ÎŞ²ÎÃüÁî
-void RegisterCommand(string commandName, KeyCode keyCode, InputAction action, InputType inputType = InputType.KeyDown)
-
-// ´ø²ÎÃüÁî
-void RegisterCommand<T>(string commandName, KeyCode keyCode, InputAction<T> action, Func<T> paramGenerator, InputType inputType = InputType.KeyDown)
-```
-
-**Ö´ĞĞÃüÁî**
-```csharp
-// ×Ô¶¯¼ì²âÊäÈëÖ´ĞĞ
-void UpdateInput()
-
-// ÊÖ¶¯´¥·¢ÎŞ²ÎÃüÁî
-void ExecuteCommand(string actionName)
-
-// ÊÖ¶¯´¥·¢´ø²ÎÃüÁî
-void ExecuteCommand<T>(string actionName, T param)
-```
-
-**¹ÜÀíÃüÁî**
-```csharp
-// ×¢Ïúµ¥¸öÃüÁî
-void UnRegisterCommand(string commandName)
-
-// ÅúÁ¿×¢ÏúÃüÁî
-void UnRegisterCommand(params string[] commandNames)
-
-// ¼ì²éÃüÁî×¢²á×´Ì¬
-bool IsCommandRegistered(string actionName)
-```
-
-**¹¤¾ß·½·¨**
-```csharp
-// Ö±½Ó¼ì²â°´¼üÊäÈë
-bool DetectKeyDownInput(KeyCode keyCode)
-```
-
-### Ã¶¾Ù£º`InputType`
-
-```csharp
-public enum InputType
-{
-    KeyDown,    // °´¼ü°´ÏÂÊ±
-    KeyUp,      // °´¼üÌ§ÆğÊ±  
-    KeyHold     // °´¼ü°´×¡Ê±
-}
-```
-
-## Ê¹ÓÃÊ¾Àı
-
-### 1. Íæ¼Ò¿ØÖÆ
-```csharp
-_inputSystem.RegisterCommand("Attack", KeyCode.Mouse0, OnAttack, InputType.KeyDown);
-_inputSystem.RegisterCommand("SpecialAttack", KeyCode.Q, OnSpecialAttack, 
-    () => new AttackParams { Power = 100, Type = AttackType.Fire }, 
-    InputType.KeyDown);
-```
-
-### 2. UI ¿ØÖÆ
-```csharp
-_inputSystem.RegisterCommand("Pause", KeyCode.Escape, OnPause, InputType.KeyDown);
-_inputSystem.RegisterCommand("Inventory", KeyCode.I, ToggleInventory, InputType.KeyDown);
-```
-
-### 3. µ÷ÊÔÃüÁî
-```csharp
-_inputSystem.RegisterCommand("DebugInfo", KeyCode.F1, ShowDebugInfo, InputType.KeyDown);
-_inputSystem.RegisterCommand("AddScore", KeyCode.F2, AddScore, () => 100, InputType.KeyDown);
-```
-
-## ×î¼ÑÊµ¼ù
-
-1. **ÃüÃû¹æ·¶**£ºÊ¹ÓÃÇåÎúµÄÃüÁîÃû³Æ£¬Èç "Player_Jump"¡¢"UI_Pause"
-2. **²ÎÊıÉú³É**£º¶ÔÓÚ¸´ÔÓ²ÎÊı£¬Ê¹ÓÃ¹¤³§·½·¨»ò Lambda ±í´ïÊ½
-3. **´íÎó´¦Àí**£ºÔÚ²ÎÊıÉú³ÉÆ÷ÖĞ´¦Àí¿ÉÄÜµÄÒì³£
-4. **ĞÔÄÜÓÅ»¯**£º±ÜÃâÔÚ Update ÖĞÆµ·±×¢²á/×¢ÏúÃüÁî
-5. **Ä£¿é»¯**£º°´¹¦ÄÜÄ£¿é·Ö×é¹ÜÀíÃüÁî
-
-## ×¢ÒâÊÂÏî
-
-- ?? ÃüÁîÃû³ÆÇø·Ö´óĞ¡Ğ´
-- ?? ×¢²áÍ¬ÃûÃüÁî»á¸²¸ÇÖ®Ç°µÄÃüÁî
-- ?? ´ø²ÎÃüÁîÊ¹ÓÃ `DynamicInvoke`£¬ÓĞÒ»¶¨ĞÔÄÜ¿ªÏú
-- ?? ²ÎÊıÉú³ÉÆ÷Òì³£»áµ¼ÖÂÃüÁîÖ´ĞĞÊ§°Ü
-
-## °æ±¾ĞÅÏ¢
-
-- **Unity °æ±¾**£º2019.4+ 
-- **.NET °æ±¾**£º4.x
-- **ÃüÃû¿Õ¼ä**£º`TechCosmos.InputSystem`
-
-## Ğí¿ÉÖ¤
-
-MIT License
+ï»¿# TechCosmos Input Systemä¸€ä¸ªçµæ´»ã€ç±»å‹å®‰å…¨çš„ Unity è¾“å…¥ç®¡ç†ç³»ç»Ÿï¼Œæ”¯æŒæ— å‚å’Œå¸¦å‚çš„å‘½ä»¤æ³¨å†Œä¸æ‰§è¡Œã€‚## åŠŸèƒ½ç‰¹æ€§- âœ… **åŒæ¨¡å¼æ”¯æŒ**ï¼šæ— å‚åŠ¨ä½œå’Œæ³›å‹å¸¦å‚åŠ¨ä½œ- âœ… **å¤šç§è¾“å…¥ç±»å‹**ï¼šKeyDownã€KeyUpã€KeyHold- âœ… **ç±»å‹å®‰å…¨**ï¼šæ³›å‹æ–¹æ³•ç¡®ä¿å‚æ•°ç±»å‹åŒ¹é…- âœ… **æ‰¹é‡æ“ä½œ**ï¼šæ”¯æŒæ‰¹é‡æ³¨é”€å‘½ä»¤- âœ… **å¼‚å¸¸å¤„ç†**ï¼šå®Œå–„çš„é”™è¯¯æç¤ºå’Œå¼‚å¸¸æ•è·- âœ… **çµæ´»æ‰§è¡Œ**ï¼šæ”¯æŒè‡ªåŠ¨æ£€æµ‹è¾“å…¥å’Œæ‰‹åŠ¨è§¦å‘å‘½ä»¤## å¿«é€Ÿå¼€å§‹### åŸºæœ¬ç”¨æ³•```csharpusing TechCosmos.InputSystem;using TechCosmos.InputSystem.Structs;using UnityEngine;public class PlayerController : MonoBehaviour{    private InputSystem _inputSystem;    private void Start()    {        _inputSystem = new InputSystem();                // æ³¨å†Œæ— å‚å‘½ä»¤        _inputSystem.RegisterCommand("Jump", KeyCode.Space, OnJump, InputType.KeyDown);                // æ³¨å†Œå¸¦å‚å‘½ä»¤        _inputSystem.RegisterCommand("Move", KeyCode.W, OnMove, () => 1.0f, InputType.KeyHold);    }    private void Update()    {        _inputSystem.UpdateInput();    }    private void OnJump()    {        Debug.Log("ç©å®¶è·³è·ƒï¼");    }    private void OnMove(float speed)    {        Debug.Log($"ä»¥é€Ÿåº¦ {speed} ç§»åŠ¨");    }}```### é«˜çº§ç”¨æ³•```csharp// æ‰‹åŠ¨è§¦å‘å‘½ä»¤_inputSystem.ExecuteCommand("Jump");_inputSystem.ExecuteCommand("Shoot", new BulletParams { Damage = 10 });// æ‰¹é‡æ³¨é”€_inputSystem.UnRegisterCommand("Jump", "Move", "Shoot");// æ£€æŸ¥å‘½ä»¤æ˜¯å¦æ³¨å†Œbool isRegistered = _inputSystem.IsCommandRegistered("Jump");// ç›´æ¥æ£€æµ‹æŒ‰é”®bool isKeyPressed = _inputSystem.DetectKeyDownInput(KeyCode.Escape);```## API æ–‡æ¡£### æ ¸å¿ƒç±»ï¼š`InputSystem`#### å§”æ‰˜ç±»å‹- `InputAction` - æ— å‚åŠ¨ä½œå§”æ‰˜- `InputAction<T>` - å¸¦å‚åŠ¨ä½œå§”æ‰˜#### ä¸»è¦æ–¹æ³•**æ³¨å†Œå‘½ä»¤**```csharp// æ— å‚å‘½ä»¤void RegisterCommand(string commandName, KeyCode keyCode, InputAction action, InputType inputType = InputType.KeyDown)// å¸¦å‚å‘½ä»¤void RegisterCommand<T>(string commandName, KeyCode keyCode, InputAction<T> action, Func<T> paramGenerator, InputType inputType = InputType.KeyDown)```**æ‰§è¡Œå‘½ä»¤**```csharp// è‡ªåŠ¨æ£€æµ‹è¾“å…¥æ‰§è¡Œvoid UpdateInput()// æ‰‹åŠ¨è§¦å‘æ— å‚å‘½ä»¤void ExecuteCommand(string actionName)// æ‰‹åŠ¨è§¦å‘å¸¦å‚å‘½ä»¤void ExecuteCommand<T>(string actionName, T param)```**ç®¡ç†å‘½ä»¤**```csharp// æ³¨é”€å•ä¸ªå‘½ä»¤void UnRegisterCommand(string commandName)// æ‰¹é‡æ³¨é”€å‘½ä»¤void UnRegisterCommand(params string[] commandNames)// æ£€æŸ¥å‘½ä»¤æ³¨å†ŒçŠ¶æ€bool IsCommandRegistered(string actionName)```**å·¥å…·æ–¹æ³•**```csharp// ç›´æ¥æ£€æµ‹æŒ‰é”®è¾“å…¥bool DetectKeyDownInput(KeyCode keyCode)```### æšä¸¾ï¼š`InputType````csharppublic enum InputType{    KeyDown,    // æŒ‰é”®æŒ‰ä¸‹æ—¶    KeyUp,      // æŒ‰é”®æŠ¬èµ·æ—¶      KeyHold     // æŒ‰é”®æŒ‰ä½æ—¶}```## ä½¿ç”¨ç¤ºä¾‹### 1. ç©å®¶æ§åˆ¶```csharp_inputSystem.RegisterCommand("Attack", KeyCode.Mouse0, OnAttack, InputType.KeyDown);_inputSystem.RegisterCommand("SpecialAttack", KeyCode.Q, OnSpecialAttack,     () => new AttackParams { Power = 100, Type = AttackType.Fire },     InputType.KeyDown);```### 2. UI æ§åˆ¶```csharp_inputSystem.RegisterCommand("Pause", KeyCode.Escape, OnPause, InputType.KeyDown);_inputSystem.RegisterCommand("Inventory", KeyCode.I, ToggleInventory, InputType.KeyDown);```### 3. è°ƒè¯•å‘½ä»¤```csharp_inputSystem.RegisterCommand("DebugInfo", KeyCode.F1, ShowDebugInfo, InputType.KeyDown);_inputSystem.RegisterCommand("AddScore", KeyCode.F2, AddScore, () => 100, InputType.KeyDown);```## æœ€ä½³å®è·µ1. **å‘½åè§„èŒƒ**ï¼šä½¿ç”¨æ¸…æ™°çš„å‘½ä»¤åç§°ï¼Œå¦‚ "Player_Jump"ã€"UI_Pause"2. **å‚æ•°ç”Ÿæˆ**ï¼šå¯¹äºå¤æ‚å‚æ•°ï¼Œä½¿ç”¨å·¥å‚æ–¹æ³•æˆ– Lambda è¡¨è¾¾å¼3. **é”™è¯¯å¤„ç†**ï¼šåœ¨å‚æ•°ç”Ÿæˆå™¨ä¸­å¤„ç†å¯èƒ½çš„å¼‚å¸¸4. **æ€§èƒ½ä¼˜åŒ–**ï¼šé¿å…åœ¨ Update ä¸­é¢‘ç¹æ³¨å†Œ/æ³¨é”€å‘½ä»¤5. **æ¨¡å—åŒ–**ï¼šæŒ‰åŠŸèƒ½æ¨¡å—åˆ†ç»„ç®¡ç†å‘½ä»¤## æ³¨æ„äº‹é¡¹- âš ï¸ å‘½ä»¤åç§°åŒºåˆ†å¤§å°å†™- âš ï¸ æ³¨å†ŒåŒåå‘½ä»¤ä¼šè¦†ç›–ä¹‹å‰çš„å‘½ä»¤- âš ï¸ å¸¦å‚å‘½ä»¤ä½¿ç”¨ `DynamicInvoke`ï¼Œæœ‰ä¸€å®šæ€§èƒ½å¼€é”€- âš ï¸ å‚æ•°ç”Ÿæˆå™¨å¼‚å¸¸ä¼šå¯¼è‡´å‘½ä»¤æ‰§è¡Œå¤±è´¥## ç‰ˆæœ¬ä¿¡æ¯- **Unity ç‰ˆæœ¬**ï¼š2019.4+ - **.NET ç‰ˆæœ¬**ï¼š4.x- **å‘½åç©ºé—´**ï¼š`TechCosmos.InputSystem`## è®¸å¯è¯MIT License
