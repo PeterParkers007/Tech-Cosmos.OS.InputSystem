@@ -1,0 +1,20 @@
+{
+  "name": "com.techcosmos.input-system",
+  "version": "1.0.0",
+  "displayName": "TechCosmos Input System",
+  "description": "Unity 的轻量级且可扩展的输入管理系统，提供解耦的输入命令映射，支持参数化作和动态注册",
+  "unity": "2022.3",
+  "keywords": [
+    "input",
+    "system",
+    "command",
+    "mapping",
+    "keyboard",
+    "unity"
+  ],
+  "author": {
+    "name": "Tech-Cosmos",
+    "email": "3427463164@qq.com",
+    "url": "https://github.com/PeterParkers007/Tech-Cosmos"
+  }
+}

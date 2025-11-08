@@ -1,0 +1,177 @@
+# TechCosmos Input System
+
+一个灵活、类型安全的 Unity 输入管理系统，支持无参和带参的命令注册与执行。
+
+## 功能特性
+
+- ? **双模式支持**：无参动作和泛型带参动作
+- ? **多种输入类型**：KeyDown、KeyUp、KeyHold
+- ? **类型安全**：泛型方法确保参数类型匹配
+- ? **批量操作**：支持批量注销命令
+- ? **异常处理**：完善的错误提示和异常捕获
+- ? **灵活执行**：支持自动检测输入和手动触发命令
+
+## 快速开始
+
+### 基本用法
+
+```csharp
+using TechCosmos.InputSystem;
+using TechCosmos.InputSystem.Structs;
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    private InputSystem _inputSystem;
+
+    private void Start()
+    {
+        _inputSystem = new InputSystem();
+        
+        // 注册无参命令
+        _inputSystem.RegisterCommand("Jump", KeyCode.Space, OnJump, InputType.KeyDown);
+        
+        // 注册带参命令
+        _inputSystem.RegisterCommand("Move", KeyCode.W, OnMove, () => 1.0f, InputType.KeyHold);
+    }
+
+    private void Update()
+    {
+        _inputSystem.UpdateInput();
+    }
+
+    private void OnJump()
+    {
+        Debug.Log("玩家跳跃！");
+    }
+
+    private void OnMove(float speed)
+    {
+        Debug.Log($"以速度 {speed} 移动");
+    }
+}
+```
+
+### 高级用法
+
+```csharp
+// 手动触发命令
+_inputSystem.ExecuteCommand("Jump");
+_inputSystem.ExecuteCommand("Shoot", new BulletParams { Damage = 10 });
+
+// 批量注销
+_inputSystem.UnRegisterCommand("Jump", "Move", "Shoot");
+
+// 检查命令是否注册
+bool isRegistered = _inputSystem.IsCommandRegistered("Jump");
+
+// 直接检测按键
+bool isKeyPressed = _inputSystem.DetectKeyDownInput(KeyCode.Escape);
+```
+
+## API 文档
+
+### 核心类：`InputSystem`
+
+#### 委托类型
+- `InputAction` - 无参动作委托
+- `InputAction<T>` - 带参动作委托
+
+#### 主要方法
+
+**注册命令**
+```csharp
+// 无参命令
+void RegisterCommand(string commandName, KeyCode keyCode, InputAction action, InputType inputType = InputType.KeyDown)
+
+// 带参命令
+void RegisterCommand<T>(string commandName, KeyCode keyCode, InputAction<T> action, Func<T> paramGenerator, InputType inputType = InputType.KeyDown)
+```
+
+**执行命令**
+```csharp
+// 自动检测输入执行
+void UpdateInput()
+
+// 手动触发无参命令
+void ExecuteCommand(string actionName)
+
+// 手动触发带参命令
+void ExecuteCommand<T>(string actionName, T param)
+```
+
+**管理命令**
+```csharp
+// 注销单个命令
+void UnRegisterCommand(string commandName)
+
+// 批量注销命令
+void UnRegisterCommand(params string[] commandNames)
+
+// 检查命令注册状态
+bool IsCommandRegistered(string actionName)
+```
+
+**工具方法**
+```csharp
+// 直接检测按键输入
+bool DetectKeyDownInput(KeyCode keyCode)
+```
+
+### 枚举：`InputType`
+
+```csharp
+public enum InputType
+{
+    KeyDown,    // 按键按下时
+    KeyUp,      // 按键抬起时  
+    KeyHold     // 按键按住时
+}
+```
+
+## 使用示例
+
+### 1. 玩家控制
+```csharp
+_inputSystem.RegisterCommand("Attack", KeyCode.Mouse0, OnAttack, InputType.KeyDown);
+_inputSystem.RegisterCommand("SpecialAttack", KeyCode.Q, OnSpecialAttack, 
+    () => new AttackParams { Power = 100, Type = AttackType.Fire }, 
+    InputType.KeyDown);
+```
+
+### 2. UI 控制
+```csharp
+_inputSystem.RegisterCommand("Pause", KeyCode.Escape, OnPause, InputType.KeyDown);
+_inputSystem.RegisterCommand("Inventory", KeyCode.I, ToggleInventory, InputType.KeyDown);
+```
+
+### 3. 调试命令
+```csharp
+_inputSystem.RegisterCommand("DebugInfo", KeyCode.F1, ShowDebugInfo, InputType.KeyDown);
+_inputSystem.RegisterCommand("AddScore", KeyCode.F2, AddScore, () => 100, InputType.KeyDown);
+```
+
+## 最佳实践
+
+1. **命名规范**：使用清晰的命令名称，如 "Player_Jump"、"UI_Pause"
+2. **参数生成**：对于复杂参数，使用工厂方法或 Lambda 表达式
+3. **错误处理**：在参数生成器中处理可能的异常
+4. **性能优化**：避免在 Update 中频繁注册/注销命令
+5. **模块化**：按功能模块分组管理命令
+
+## 注意事项
+
+- ?? 命令名称区分大小写
+- ?? 注册同名命令会覆盖之前的命令
+- ?? 带参命令使用 `DynamicInvoke`，有一定性能开销
+- ?? 参数生成器异常会导致命令执行失败
+
+## 版本信息
+
+- **Unity 版本**：2019.4+ 
+- **.NET 版本**：4.x
+- **命名空间**：`TechCosmos.InputSystem`
+
+## 许可证
+
+MIT License
