@@ -2,7 +2,7 @@
   "name": "com.techcosmos.input-system",
   "version": "1.0.0",
   "displayName": "TechCosmos Input System",
-  "description": "Unity µÄÇáÁ¿¼¶ÇÒ¿ÉÀ©Õ¹µÄÊäÈë¹ÜÀíÏµÍ³£¬Ìá¹©½âñîµÄÊäÈëÃüÁîÓ³Éä£¬Ö§³Ö²ÎÊı»¯×÷ºÍ¶¯Ì¬×¢²á",
+  "description": "Unity çš„è½»é‡çº§ä¸”å¯æ‰©å±•çš„è¾“å…¥ç®¡ç†ç³»ç»Ÿï¼Œæä¾›è§£è€¦çš„è¾“å…¥å‘½ä»¤æ˜ å°„ï¼Œæ”¯æŒå‚æ•°åŒ–ä½œå’ŒåŠ¨æ€æ³¨å†Œ",
   "unity": "2022.3",
   "keywords": [
     "input",
