@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace TechCosmos.InputSystem.Runtime.SO
 {
-    [CreateAssetMenu(fileName ="New MobaInput Config",menuName ="TechCosmos/Input")]
+    [CreateAssetMenu(fileName ="New Input Config",menuName ="Tech-Cosmos/Config/Input")]
     public class MobaInputSOKey : ScriptableObject
     {
         public string id;
