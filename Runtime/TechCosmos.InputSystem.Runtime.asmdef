@@ -1,6 +1,6 @@
 {
-    "name": "TechCosmos.OS.InputSystem.Runtime",
-    "rootNamespace": "TechCosmos.InputSystem.Runtime",
+	"name": "TechCosmos.InputSystem.Runtime",
+    "rootNamespace": "TechCosmos.InputSystem",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

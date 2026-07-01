@@ -1,183 +1,170 @@
-﻿# TechCosmos Input System
+﻿# Tech-Cosmos OS Input System
 
-一个灵活、类型安全的 Unity 输入管理系统，支持无参和带参的命令注册与执行。
+## 概述
 
-## 功能特性
+Tech-Cosmos OS Input System 是一个专为 Unity 项目设计的、灵活且可扩展的输入管理模块。它允许开发者在编辑器中直观地配置默认按键，并支持在运行时通过 UI 动态地重新绑定按键。系统会自动将用户的自定义按键配置以 JSON 格式保存到本地，并在下次启动时加载。
 
-- ✅ **双模式支持**：无参动作和泛型带参动作
-- ✅ **多种输入类型**：KeyDown、KeyUp、KeyHold
-- ✅ **类型安全**：泛型方法确保参数类型匹配
-- ✅ **批量操作**：支持批量注销命令
-- ✅ **异常处理**：完善的错误提示和异常捕获
-- ✅ **灵活执行**：支持自动检测输入和手动触发命令
+## 主要特性
+
+*   **可配置的默认按键**：通过 `ScriptableObject` 集中管理所有动作的默认按键绑定。
+*   **运行时按键重绑定**：提供简洁的 UI 组件，允许玩家在游戏内自由更改按键。
+*   **冲突检测**：在绑定新按键时，自动检测并避免与其他已绑定的动作发生冲突。
+*   **本地持久化**：按键配置会自动保存为 JSON 文件，并在游戏启动时加载。
+*   **事件驱动**：当按键绑定发生变更时，会触发全局事件，方便其他系统响应。
+*   **易于集成**：单例模式的 `InputManager` 可方便地在任何脚本中调用，获取输入状态。
+
+## 文件结构
+
+```
+Tech-Cosmos.OS.InputSystem/
+└── Runtime/
+    ├── InputConfig.cs       # ScriptableObject 配置文件，用于存储所有动作的默认按键列表。
+    ├── InputManager.cs      # 核心管理器，处理按键注册、重绑定、持久化及输入查询。
+    ├── KeyBindingUI.cs      # UI 组件，用于在游戏中显示并动态重绑定单个按键。
+    └── KeyConfig.cs         # 数据结构，定义了一个动作名与按键的配对。
+```
 
 ## 快速开始
 
-### 基本用法
+### 1. 创建配置文件
+
+1.  在 Unity 编辑器的 `Project` 窗口中，右键点击并选择 **Create → Tech-Cosmos → Input → Config**。
+2.  将其命名为，例如 `PlayerInputConfig`。
+3.  在 `Inspector` 窗口中，设置 `Key Configs` 列表的大小，并添加你的动作（如 "Jump"、"Fire"、"Interact" 等），为每个动作指定一个默认 `KeyCode`。
+
+**示例 `KeyConfig` 结构：**
+
+| Name      | KeyCode  |
+| :-------- | :------- |
+| Jump      | Space    |
+| Fire      | Mouse0   |
+| Interact  | E        |
+| Pause     | Escape   |
+
+### 2. 设置 InputManager
+
+1.  在场景中创建一个空的 `GameObject`。
+2.  为其添加 `InputManager` 组件。
+3.  将第 1 步创建的 `InputConfig` 文件拖拽到 `InputManager` 的 `Config` 字段上。
+
+`InputManager` 会在 `Awake` 中自动将自己设置为单例且跨场景不销毁（`DontDestroyOnLoad`）。
+
+### 3. 创建按键绑定 UI（可选）
+
+1.  在 `Canvas` 下创建一个 `Panel`，用于放置按键绑定入口。
+2.  为其添加 `KeyBindingUI` 组件。
+3.  在 `Inspector` 中配置该组件：
+    *   **Action Name**：填入你要它控制的动作名，例如 "Jump"。
+    *   **Key Text**：拖入一个用于显示当前按键的 `Text` 或 `TextMeshProUGUI` 组件。
+    *   **Bind Button**：拖入一个用于触发重绑定的 `Button` 组件。
+    *   **Ignored Keys**：可选，添加在监听时希望忽略的按键（默认已忽略 `Mouse0`, `Mouse1`, `Mouse2`, `None`）。
+    *   **On Key Rebinded** / **On Listening State Changed**：可选，绑定你自己的 UnityEvent 以响应事件。
+
+当玩家点击 **Bind Button** 时，`KeyBindingUI` 会进入监听状态，等待玩家按下新按键，完成后自动更新 UI 并保存配置。
+
+### 4. 在脚本中查询输入
+
+在任何继承自 `MonoBehaviour` 的脚本中，你都可以通过单例实例来查询输入，无需单独引用。
 
 ```csharp
-using TechCosmos.InputSystem;
-using TechCosmos.InputSystem.Structs;
+using TechCosmos.InputSystem.Runtime;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    private InputSystem _inputSystem;
-
-    private void Start()
-    {
-        _inputSystem = new InputSystem();
-        
-        // 注册无参命令
-        _inputSystem.RegisterCommand("Jump", KeyCode.Space, OnJump, InputType.KeyDown);
-        
-        // 注册带参命令
-        _inputSystem.RegisterCommand("Move", KeyCode.W, OnMove, () => 1.0f, InputType.KeyHold);
-    }
-
     private void Update()
     {
-        _inputSystem.UpdateInput();
-    }
+        // 持续按键（例如：移动）
+        if (InputManager.Instance.GetKey("Jump"))
+        {
+            Debug.Log("跳跃键被按住");
+        }
 
-    private void OnJump()
-    {
-        Debug.Log("玩家跳跃！");
-    }
+        // 按下瞬间（例如：开火）
+        if (InputManager.Instance.GetKeyDown("Fire"))
+        {
+            Debug.Log("开火键刚按下！");
+        }
 
-    private void OnMove(float speed)
-    {
-        Debug.Log($"以速度 {speed} 移动");
+        // 抬起瞬间
+        if (InputManager.Instance.GetKeyUp("Pause"))
+        {
+            Debug.Log("暂停键被松开，切换暂停状态");
+        }
     }
 }
 ```
 
-### 高级用法
+## 核心 API 参考
 
-```csharp
-// 手动触发命令
-_inputSystem.ExecuteCommand("Jump");
-_inputSystem.ExecuteCommand("Shoot", new BulletParams { Damage = 10 });
+### InputManager
 
-// 批量注销
-_inputSystem.UnRegisterCommand("Jump", "Move", "Shoot");
+| 方法 / 属性 | 说明 |
+| :--- | :--- |
+| `Instance` | 静态单例访问点。 |
+| `Config` | 获取当前关联的 `InputConfig` 资产。 |
+| `GetKey(string name)` | 返回指定动作的按键是否**被按住**。 |
+| `GetKeyDown(string name)` | 返回指定动作的按键是否在**当前帧按下**。 |
+| `GetKeyUp(string name)` | 返回指定动作的按键是否在**当前帧抬起**。 |
+| `GetKeyCode(string name)` | 返回指定动作当前绑定的 `KeyCode`。 |
+| `RebindKey(string name, KeyCode newKey)` | 重新绑定指定动作的按键，默认会进行冲突检测。 |
+| `ResetToDefault()` | 将所有动作的按键重置为 `InputConfig` 中定义的默认值，并删除存档。 |
+| `ResetKeyToDefault(string name)` | 仅将指定动作的按键重置为默认值，并保存。 |
+| `SaveBindings()` | 手动保存当前所有按键绑定到本地文件。 |
+| `LoadBindings()` | 从本地文件加载并覆盖当前按键绑定。 |
+| `GetAllActionNames()` | 返回所有已注册动作名的列表。 |
+| `GetAllBindings()` | 返回当前所有动作及其绑定的字典副本。 |
 
-// 检查命令是否注册
-bool isRegistered = _inputSystem.IsCommandRegistered("Jump");
+### KeyBindingUI
 
-// 直接检测按键
-bool isKeyPressed = _inputSystem.DetectKeyDownInput(KeyCode.Escape);
-```
+| 成员 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `actionName` | `string` | 本 UI 组件所控制的动作名。 |
+| `keyText` | `Text` | 用于显示当前按键的 UI 文本。 |
+| `bindButton` | `Button` | 点击后开始监听新按键的按钮。 |
+| `ignoredKeys` | `KeyCode[]` | 监听时需要忽略的按键数组。 |
+| `onKeyRebinded` | `UnityEvent<string, KeyCode>` | 按键重绑定成功时触发。 |
+| `onListeningStateChanged` | `UnityEvent<bool>` | 监听状态改变时触发。 |
+| `StartListening()` | 方法 | 公开方法，可手动调用以开始监听按键。 |
+| `CancelListening()` | 方法 | 公开方法，可手动调用以取消监听。 |
+| `ResetToDefault()` | 方法 | 公开方法，可手动调用以将此动作按键重置为默认。 |
 
-## API 文档
+## 工作流程与架构
 
-### 核心类：`InputSystem`
+1.  **初始化**：`InputManager` 在 `Awake` 时，从 `InputConfig` 读取所有默认按键进行注册。
+2.  **加载存档**：之后立即尝试从 `Application.persistentDataPath/keybindings.json` 加载玩家的自定义配置，覆盖默认值。
+3.  **运行时查询**：游戏代码通过 `InputManager` 的 `GetKey`、`GetKeyDown` 等方法，以**动作名**（而非具体按键）来查询输入状态，实现了按键与游戏逻辑的解耦。
+4.  **重绑定**：通过 `KeyBindingUI` 或直接调用 `InputManager.RebindKey`，更改内存中的映射关系。
+5.  **持久化**：重绑定操作会触发 `OnKeyRebinded` 事件，并在成功后将当前所有按键映射序列化并写入 JSON 文件。
 
-#### 委托类型
-- `InputAction` - 无参动作委托
-- `InputAction<T>` - 带参动作委托
+### JSON 存档格式示例
 
-#### 主要方法
-
-**注册命令**
-```csharp
-// 无参命令
-void RegisterCommand(string commandName, KeyCode keyCode, InputAction action, InputType inputType = InputType.KeyDown)
-
-// 带参命令
-void RegisterCommand<T>(string commandName, KeyCode keyCode, InputAction<T> action, Func<T> paramGenerator, InputType inputType = InputType.KeyDown)
-```
-
-**执行命令**
-```csharp
-// 自动检测输入执行
-void UpdateInput()
-
-// 手动触发无参命令
-void ExecuteCommand(string actionName)
-
-// 手动触发带参命令
-void ExecuteCommand<T>(string actionName, T param)
-```
-
-**管理命令**
-```csharp
-// 注销单个命令
-void UnRegisterCommand(string commandName)
-
-// 批量注销命令
-void UnRegisterCommand(params string[] commandNames)
-
-// 检查命令注册状态
-bool IsCommandRegistered(string actionName)
-```
-
-**工具方法**
-```csharp
-// 直接检测按键输入
-bool DetectKeyDownInput(KeyCode keyCode)
-```
-
-### 枚举：`InputType`
-
-```csharp
-public enum InputType
+```json
 {
-    KeyDown,    // 按键按下时
-    KeyUp,      // 按键抬起时  
-    KeyHold     // 按键按住时
+    "bindings": [
+        {
+            "name": "Jump",
+            "keyCode": 32
+        },
+        {
+            "name": "Fire",
+            "keyCode": 323
+        }
+    ]
 }
 ```
 
-## 使用示例
+（注：`keyCode` 是 Unity `KeyCode` 枚举对应的整数值，如 32 代表 Space，323 代表 Mouse0。）
 
-### 1. 玩家控制
-```csharp
-_inputSystem.RegisterCommand("Attack", KeyCode.Mouse0, OnAttack, InputType.KeyDown);
-_inputSystem.RegisterCommand("SpecialAttack", KeyCode.Q, OnSpecialAttack, 
-    () => new AttackParams { Power = 100, Type = AttackType.Fire }, 
-    InputType.KeyDown);
-```
+## 依赖项
 
-### 2. UI 控制
-```csharp
-_inputSystem.RegisterCommand("Pause", KeyCode.Escape, OnPause, InputType.KeyDown);
-_inputSystem.RegisterCommand("Inventory", KeyCode.I, ToggleInventory, InputType.KeyDown);
-```
-
-### 3. 调试命令
-```csharp
-_inputSystem.RegisterCommand("DebugInfo", KeyCode.F1, ShowDebugInfo, InputType.KeyDown);
-_inputSystem.RegisterCommand("AddScore", KeyCode.F2, AddScore, () => 100, InputType.KeyDown);
-```
-
-## 最佳实践
-
-1. **命名规范**：使用清晰的命令名称，如 "Player_Jump"、"UI_Pause"
-2. **参数生成**：对于复杂参数，使用工厂方法或 Lambda 表达式
-3. **错误处理**：在参数生成器中处理可能的异常
-4. **性能优化**：避免在 Update 中频繁注册/注销命令
-5. **模块化**：按功能模块分组管理命令
+*   **Unity Engine**：`UnityEngine` 核心命名空间。
+*   **Unity UI**：`UnityEngine.UI`（用于 `KeyBindingUI` 组件中的 `Text` 和 `Button`）。
+*   **System.IO**、**System.Collections**：.NET 标准库，用于文件操作和集合。
 
 ## 注意事项
 
-- ⚠️ 命令名称区分大小写
-- ⚠️ 注册同名命令会覆盖之前的命令
-- ⚠️ 带参命令使用 `DynamicInvoke`，有一定性能开销
-- ⚠️ 参数生成器异常会导致命令执行失败
-
-## 与 Framework.InputSystem（Intent）并存
-
-本包为 **MOBA 命令映射**（`RegisterCommand`），程序集名为 **`TechCosmos.OS.InputSystem.Runtime`**。
-
-解耦层 Intent 输入包 [`Tech-Cosmos.Framework.InputSystem`](../Tech-Cosmos.Framework.InputSystem/) 使用 **`TechCosmos.InputSystem.Runtime`**。两者可同时嵌入 `Assets/Package-TechCosmos/`，不会 asmdef 冲突。
-
-## 版本信息
-
-- **Unity 版本**：2019.4+ 
-- **.NET 版本**：4.x
-- **命名空间**：`TechCosmos.InputSystem`
-
-## 许可证
-
-MIT License
+*   请确保场景中仅存在**一个**挂载了 `InputManager` 的 GameObject。如果存在多个，后创建的会自动销毁。
+*   `KeyBindingUI` 在监听按键时，按 `Escape` 键会取消本次重绑定操作。
+*   在重绑定冲突检测机制下，若新按键已绑定给其他动作，此次重绑定将失败，并输出警告。
+*   若要支持与 Unity 新输入系统（Input System Package）类似的设备级处理，此模块需要额外扩展。
