@@ -2,26 +2,22 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+
 namespace TechCosmos.InputSystem.Runtime
 {
     public class InputManager : MonoBehaviour
     {
-        // 单例
         public static InputManager Instance { get; private set; }
 
-        // 配置资产引用
         [SerializeField] private InputConfig config;
         public InputConfig Config => config;
 
-        // 存储按键名称和对应按键的映射
-        private Dictionary<string, KeyCode> keys = new Dictionary<string, KeyCode>();
+        private Dictionary<string, InputBinding> bindings = new Dictionary<string, InputBinding>();
 
-        // 保存路径
         private string savePath;
         private const string SAVE_FILE_NAME = "keybindings.json";
 
-        // 事件：按键绑定改变时触发
-        public event Action<string, KeyCode> OnKeyRebinded;
+        public event Action<string, InputBinding> OnKeyRebinded;
 
         private void Awake()
         {
@@ -34,7 +30,6 @@ namespace TechCosmos.InputSystem.Runtime
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // 设置保存路径
             savePath = Path.Combine(Application.persistentDataPath, SAVE_FILE_NAME);
 
             InitializeBindings();
@@ -50,46 +45,56 @@ namespace TechCosmos.InputSystem.Runtime
 
             foreach (var keyConfig in config.keyConfigs)
             {
-                RegisterKey(keyConfig.name, keyConfig.keyCode);
+                RegisterKey(keyConfig.name, keyConfig.GetEffectiveBinding());
             }
 
             LoadBindings();
         }
 
-        public void RegisterKey(string name, KeyCode defaultKey)
+        public void RegisterKey(string name, InputBinding defaultBinding)
         {
-            if (keys.ContainsKey(name))
+            if (bindings.ContainsKey(name))
             {
                 Debug.LogWarning($"按键 {name} 已注册，将覆盖为新的默认值。");
             }
-            keys[name] = defaultKey;
+            bindings[name] = defaultBinding;
         }
 
-        public void RebindKey(string name, KeyCode newKey, bool checkConflicts = true)
+        public void RegisterKey(string name, KeyCode defaultKey)
         {
-            if (!keys.ContainsKey(name))
+            RegisterKey(name, InputBinding.FromKeyCode(defaultKey));
+        }
+
+        public void RebindKey(string name, InputBinding newBinding, bool checkConflicts = true)
+        {
+            if (!bindings.ContainsKey(name))
             {
                 Debug.LogWarning($"未找到按键 {name}，请先注册。");
                 return;
             }
 
-            if (checkConflicts && IsKeyAlreadyBound(newKey, name))
+            if (checkConflicts && IsBindingAlreadyBound(newBinding, name))
             {
-                Debug.LogWarning($"按键 {newKey} 已被其他动作使用，请先解除绑定。");
+                Debug.LogWarning($"组合键 {newBinding.GetDisplayName()} 已被其他动作使用，请先解除绑定。");
                 return;
             }
 
-            keys[name] = newKey;
-            Debug.Log($"按键 {name} 已绑定到 {newKey}");
+            bindings[name] = newBinding;
+            Debug.Log($"按键 {name} 已绑定到 {newBinding.GetDisplayName()}");
 
-            OnKeyRebinded?.Invoke(name, newKey);
+            OnKeyRebinded?.Invoke(name, newBinding);
         }
 
-        public bool IsKeyAlreadyBound(KeyCode key, string excludeAction = null)
+        public void RebindKey(string name, KeyCode newKey, bool checkConflicts = true)
         {
-            foreach (var kvp in keys)
+            RebindKey(name, InputBinding.FromKeyCode(newKey), checkConflicts);
+        }
+
+        public bool IsBindingAlreadyBound(InputBinding binding, string excludeAction = null)
+        {
+            foreach (var kvp in bindings)
             {
-                if (kvp.Value == key)
+                if (kvp.Value.Equals(binding))
                 {
                     if (excludeAction == null || kvp.Key != excludeAction)
                     {
@@ -100,11 +105,16 @@ namespace TechCosmos.InputSystem.Runtime
             return false;
         }
 
-        public string GetActionNameByKey(KeyCode key)
+        public bool IsKeyAlreadyBound(KeyCode key, string excludeAction = null)
         {
-            foreach (var kvp in keys)
+            return IsBindingAlreadyBound(InputBinding.FromKeyCode(key), excludeAction);
+        }
+
+        public string GetActionNameByBinding(InputBinding binding)
+        {
+            foreach (var kvp in bindings)
             {
-                if (kvp.Value == key)
+                if (kvp.Value.Equals(binding))
                 {
                     return kvp.Key;
                 }
@@ -112,14 +122,24 @@ namespace TechCosmos.InputSystem.Runtime
             return null;
         }
 
-        public KeyCode GetKeyCode(string name)
+        public string GetActionNameByKey(KeyCode key)
         {
-            if (keys.TryGetValue(name, out KeyCode key))
+            return GetActionNameByBinding(InputBinding.FromKeyCode(key));
+        }
+
+        public InputBinding GetBinding(string name)
+        {
+            if (bindings.TryGetValue(name, out InputBinding binding))
             {
-                return key;
+                return binding;
             }
             Debug.LogWarning($"未找到按键 {name}");
-            return KeyCode.None;
+            return InputBinding.FromKeyCode(KeyCode.None);
+        }
+
+        public KeyCode GetKeyCode(string name)
+        {
+            return GetBinding(name).key;
         }
 
         public void ResetToDefault()
@@ -132,8 +152,9 @@ namespace TechCosmos.InputSystem.Runtime
 
             foreach (var keyConfig in config.keyConfigs)
             {
-                keys[keyConfig.name] = keyConfig.keyCode;
-                OnKeyRebinded?.Invoke(keyConfig.name, keyConfig.keyCode);
+                InputBinding defaultBinding = keyConfig.GetEffectiveBinding();
+                bindings[keyConfig.name] = defaultBinding;
+                OnKeyRebinded?.Invoke(keyConfig.name, defaultBinding);
             }
 
             ClearSavedBindings();
@@ -151,10 +172,11 @@ namespace TechCosmos.InputSystem.Runtime
             var keyConfig = config.keyConfigs.Find(k => k.name == name);
             if (keyConfig.name == name)
             {
-                keys[name] = keyConfig.keyCode;
-                OnKeyRebinded?.Invoke(name, keyConfig.keyCode);
+                InputBinding defaultBinding = keyConfig.GetEffectiveBinding();
+                bindings[name] = defaultBinding;
+                OnKeyRebinded?.Invoke(name, defaultBinding);
                 SaveBindings();
-                Debug.Log($"按键 {name} 已重置为默认值 {keyConfig.keyCode}");
+                Debug.Log($"按键 {name} 已重置为默认值 {defaultBinding.GetDisplayName()}");
             }
             else
             {
@@ -168,7 +190,7 @@ namespace TechCosmos.InputSystem.Runtime
             {
                 KeyBindingData data = new KeyBindingData();
 
-                foreach (var kvp in keys)
+                foreach (var kvp in bindings)
                 {
                     data.bindings.Add(new KeyBindingEntry(kvp.Key, kvp.Value));
                 }
@@ -207,18 +229,18 @@ namespace TechCosmos.InputSystem.Runtime
 
                 foreach (var entry in data.bindings)
                 {
-                    if (keys.ContainsKey(entry.name))
+                    if (bindings.ContainsKey(entry.name))
                     {
-                        KeyCode savedKey = entry.GetKeyCode();
+                        InputBinding savedBinding = entry.GetBinding();
 
-                        if (IsKeyAlreadyBound(savedKey, entry.name))
+                        if (IsBindingAlreadyBound(savedBinding, entry.name))
                         {
-                            Debug.LogWarning($"加载按键绑定 {entry.name} 时发现冲突：{savedKey} 已被使用，使用默认值。");
+                            Debug.LogWarning($"加载按键绑定 {entry.name} 时发现冲突：{savedBinding.GetDisplayName()} 已被使用，使用默认值。");
                             continue;
                         }
 
-                        keys[entry.name] = savedKey;
-                        OnKeyRebinded?.Invoke(entry.name, savedKey);
+                        bindings[entry.name] = savedBinding;
+                        OnKeyRebinded?.Invoke(entry.name, savedBinding);
                         loadedKeys.Add(entry.name);
                     }
                 }
@@ -252,42 +274,52 @@ namespace TechCosmos.InputSystem.Runtime
 
         public bool GetKey(string name)
         {
-            if (!keys.TryGetValue(name, out KeyCode key))
+            if (!bindings.TryGetValue(name, out InputBinding binding))
             {
                 Debug.LogWarning($"未注册按键：{name}");
                 return false;
             }
-            return Input.GetKey(key);
+            return binding.IsPressed();
         }
 
         public bool GetKeyDown(string name)
         {
-            if (!keys.TryGetValue(name, out KeyCode key))
+            if (!bindings.TryGetValue(name, out InputBinding binding))
             {
                 Debug.LogWarning($"未注册按键：{name}");
                 return false;
             }
-            return Input.GetKeyDown(key);
+            return binding.WasPressedThisFrame();
         }
 
         public bool GetKeyUp(string name)
         {
-            if (!keys.TryGetValue(name, out KeyCode key))
+            if (!bindings.TryGetValue(name, out InputBinding binding))
             {
                 Debug.LogWarning($"未注册按键：{name}");
                 return false;
             }
-            return Input.GetKeyUp(key);
+            return binding.WasReleasedThisFrame();
         }
 
         public List<string> GetAllActionNames()
         {
-            return new List<string>(keys.Keys);
+            return new List<string>(bindings.Keys);
         }
 
-        public Dictionary<string, KeyCode> GetAllBindings()
+        public Dictionary<string, InputBinding> GetAllBindings()
         {
-            return new Dictionary<string, KeyCode>(keys);
+            return new Dictionary<string, InputBinding>(bindings);
+        }
+
+        public Dictionary<string, KeyCode> GetAllKeyCodes()
+        {
+            var result = new Dictionary<string, KeyCode>();
+            foreach (var kvp in bindings)
+            {
+                result[kvp.Key] = kvp.Value.key;
+            }
+            return result;
         }
 
         [Serializable]
@@ -301,16 +333,30 @@ namespace TechCosmos.InputSystem.Runtime
         {
             public string name;
             public int keyCode;
+            public int modifiers;
+            public int comboKey;
 
-            public KeyBindingEntry(string name, KeyCode key)
+            public KeyBindingEntry(string name, InputBinding binding)
             {
                 this.name = name;
-                this.keyCode = (int)key;
+                keyCode = (int)binding.key;
+                modifiers = (int)binding.modifiers;
+                comboKey = (int)binding.comboKey;
             }
 
-            public KeyCode GetKeyCode()
+            public InputBinding GetBinding()
             {
-                return (KeyCode)keyCode;
+                if (modifiers == 0 && comboKey == 0)
+                {
+                    return InputBinding.FromKeyCode((KeyCode)keyCode);
+                }
+
+                return new InputBinding
+                {
+                    key = (KeyCode)keyCode,
+                    modifiers = (ModifierKey)modifiers,
+                    comboKey = (KeyCode)comboKey
+                };
             }
         }
     }

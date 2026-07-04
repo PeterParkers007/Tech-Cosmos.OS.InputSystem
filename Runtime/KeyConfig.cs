@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+
 namespace TechCosmos.InputSystem.Runtime
 {
     [Serializable]
@@ -7,5 +8,14 @@ namespace TechCosmos.InputSystem.Runtime
     {
         public string name;
         public KeyCode keyCode;
+        public InputBinding binding;
+
+        public InputBinding GetEffectiveBinding()
+        {
+            if (!binding.IsEmpty)
+                return binding;
+
+            return InputBinding.FromKeyCode(keyCode);
+        }
     }
 }
