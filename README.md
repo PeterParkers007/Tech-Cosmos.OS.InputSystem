@@ -31,11 +31,11 @@ Tech-Cosmos.OS.InputSystem/
 
 1.  在 Unity 编辑器的 `Project` 窗口中，右键点击并选择 **Create → Tech-Cosmos → Input → Config**。
 2.  将其命名为，例如 `PlayerInputConfig`。
-3.  在 `Inspector` 窗口中，设置 `Key Configs` 列表的大小，并添加你的动作（如 "Jump"、"Fire"、"Interact" 等），为每个动作指定默认按键。
+3.  在 `Inspector` 窗口中，设置 `Key Configs` 列表的大小，并添加你的动作（如 "Jump"、"Fire"、"Interact" 等），为每个动作配置 `Binding` 字段。
 
-**单键绑定（兼容旧配置）：** 只需填写 `Key Code` 字段。
+**单键绑定：** 只设置 `Binding → Key`，`Modifiers` 与 `Combo Key` 留空。
 
-**组合键绑定：** 展开 `Binding` 字段进行配置：
+**组合键绑定：**
 
 | 字段 | 说明 |
 | :--- | :--- |
@@ -45,13 +45,13 @@ Tech-Cosmos.OS.InputSystem/
 
 **示例 `KeyConfig` 结构：**
 
-| Name       | 绑定方式                          |
-| :--------- | :-------------------------------- |
-| Jump       | Space                             |
-| Fire       | Mouse0                            |
-| QuickSave  | Binding: Alt + S                    |
-| SpecialAtk | Binding: A + 鼠标左键（Combo Key=A, Key=Mouse0） |
-| Pause      | Escape                            |
+| Name       | Binding 配置 |
+| :--------- | :----------- |
+| Jump       | Key=Space |
+| Fire       | Key=Mouse0 |
+| QuickSave  | Key=S, Modifiers=Alt |
+| SpecialAtk | Key=Mouse0, Combo Key=A |
+| Pause      | Key=Escape |
 
 ### 2. 设置 InputManager
 

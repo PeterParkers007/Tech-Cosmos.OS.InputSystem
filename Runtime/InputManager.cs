@@ -39,13 +39,13 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (config == null)
             {
-                Debug.LogError("InputConfig 未设置！请在 Inspector 中为 InputManager 拖拽赋值 Config 字段。");
+                Debug.LogError("InputConfig ??????????? Inspector ??? InputManager ?????? Config ?????");
                 return;
             }
 
             foreach (var keyConfig in config.keyConfigs)
             {
-                RegisterKey(keyConfig.name, keyConfig.GetEffectiveBinding());
+                RegisterKey(keyConfig.name, keyConfig.binding);
             }
 
             LoadBindings();
@@ -55,7 +55,7 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (bindings.ContainsKey(name))
             {
-                Debug.LogWarning($"按键 {name} 已注册，将覆盖为新的默认值。");
+                Debug.LogWarning($"???? {name} ?????????????????????");
             }
             bindings[name] = defaultBinding;
         }
@@ -69,18 +69,18 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (!bindings.ContainsKey(name))
             {
-                Debug.LogWarning($"未找到按键 {name}，请先注册。");
+                Debug.LogWarning($"????????? {name}?????????");
                 return;
             }
 
             if (checkConflicts && IsBindingAlreadyBound(newBinding, name))
             {
-                Debug.LogWarning($"组合键 {newBinding.GetDisplayName()} 已被其他动作使用，请先解除绑定。");
+                Debug.LogWarning($"???? {newBinding.GetDisplayName()} ????????????????????????");
                 return;
             }
 
             bindings[name] = newBinding;
-            Debug.Log($"按键 {name} 已绑定到 {newBinding.GetDisplayName()}");
+            Debug.Log($"???? {name} ???? {newBinding.GetDisplayName()}");
 
             OnKeyRebinded?.Invoke(name, newBinding);
         }
@@ -133,7 +133,7 @@ namespace TechCosmos.InputSystem.Runtime
             {
                 return binding;
             }
-            Debug.LogWarning($"未找到按键 {name}");
+            Debug.LogWarning($"????????? {name}");
             return InputBinding.FromKeyCode(KeyCode.None);
         }
 
@@ -146,41 +146,41 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (config == null)
             {
-                Debug.LogError("InputConfig 未设置，无法重置。");
+                Debug.LogError("InputConfig ????????????????");
                 return;
             }
 
             foreach (var keyConfig in config.keyConfigs)
             {
-                InputBinding defaultBinding = keyConfig.GetEffectiveBinding();
+                InputBinding defaultBinding = keyConfig.binding;
                 bindings[keyConfig.name] = defaultBinding;
                 OnKeyRebinded?.Invoke(keyConfig.name, defaultBinding);
             }
 
             ClearSavedBindings();
-            Debug.Log("所有按键已重置为默认值。");
+            Debug.Log("?????????????????????");
         }
 
         public void ResetKeyToDefault(string name)
         {
             if (config == null)
             {
-                Debug.LogError("InputConfig 未设置，无法重置。");
+                Debug.LogError("InputConfig ????????????????");
                 return;
             }
 
             var keyConfig = config.keyConfigs.Find(k => k.name == name);
             if (keyConfig.name == name)
             {
-                InputBinding defaultBinding = keyConfig.GetEffectiveBinding();
+                InputBinding defaultBinding = keyConfig.binding;
                 bindings[name] = defaultBinding;
                 OnKeyRebinded?.Invoke(name, defaultBinding);
                 SaveBindings();
-                Debug.Log($"按键 {name} 已重置为默认值 {defaultBinding.GetDisplayName()}");
+                Debug.Log($"???? {name} ??????????? {defaultBinding.GetDisplayName()}");
             }
             else
             {
-                Debug.LogWarning($"未在默认配置中找到按键 {name}");
+                Debug.LogWarning($"???????????????????? {name}");
             }
         }
 
@@ -198,11 +198,11 @@ namespace TechCosmos.InputSystem.Runtime
                 string json = JsonUtility.ToJson(data, true);
                 File.WriteAllText(savePath, json);
 
-                Debug.Log($"按键绑定已保存到: {savePath}");
+                Debug.Log($"????????????: {savePath}");
             }
             catch (Exception e)
             {
-                Debug.LogError($"保存按键绑定失败: {e.Message}");
+                Debug.LogError($"???????????: {e.Message}");
             }
         }
 
@@ -210,7 +210,7 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (!File.Exists(savePath))
             {
-                Debug.Log("未找到保存的按键绑定文件，使用默认配置。");
+                Debug.Log("????????????????????????????????");
                 return;
             }
 
@@ -221,7 +221,7 @@ namespace TechCosmos.InputSystem.Runtime
 
                 if (data?.bindings == null || data.bindings.Count == 0)
                 {
-                    Debug.LogWarning("按键绑定文件为空或格式错误。");
+                    Debug.LogWarning("???????????????????");
                     return;
                 }
 
@@ -235,7 +235,7 @@ namespace TechCosmos.InputSystem.Runtime
 
                         if (IsBindingAlreadyBound(savedBinding, entry.name))
                         {
-                            Debug.LogWarning($"加载按键绑定 {entry.name} 时发现冲突：{savedBinding.GetDisplayName()} 已被使用，使用默认值。");
+                            Debug.LogWarning($"????????? {entry.name} ?????????{savedBinding.GetDisplayName()} ????????????????");
                             continue;
                         }
 
@@ -247,12 +247,12 @@ namespace TechCosmos.InputSystem.Runtime
 
                 if (loadedKeys.Count > 0)
                 {
-                    Debug.Log($"已加载 {loadedKeys.Count} 个按键绑定：{string.Join(", ", loadedKeys)}");
+                    Debug.Log($"????? {loadedKeys.Count} ?????????{string.Join(", ", loadedKeys)}");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"加载按键绑定失败: {e.Message}");
+                Debug.LogError($"????????????: {e.Message}");
             }
         }
 
@@ -263,12 +263,12 @@ namespace TechCosmos.InputSystem.Runtime
                 if (File.Exists(savePath))
                 {
                     File.Delete(savePath);
-                    Debug.Log("已删除保存的按键绑定文件。");
+                    Debug.Log("????????????????????");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"删除按键绑定文件失败: {e.Message}");
+                Debug.LogError($"???????????????: {e.Message}");
             }
         }
 
@@ -276,7 +276,7 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (!bindings.TryGetValue(name, out InputBinding binding))
             {
-                Debug.LogWarning($"未注册按键：{name}");
+                Debug.LogWarning($"?????????{name}");
                 return false;
             }
             return binding.IsPressed();
@@ -286,7 +286,7 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (!bindings.TryGetValue(name, out InputBinding binding))
             {
-                Debug.LogWarning($"未注册按键：{name}");
+                Debug.LogWarning($"?????????{name}");
                 return false;
             }
             return binding.WasPressedThisFrame();
@@ -296,7 +296,7 @@ namespace TechCosmos.InputSystem.Runtime
         {
             if (!bindings.TryGetValue(name, out InputBinding binding))
             {
-                Debug.LogWarning($"未注册按键：{name}");
+                Debug.LogWarning($"?????????{name}");
                 return false;
             }
             return binding.WasReleasedThisFrame();
