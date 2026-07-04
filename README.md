@@ -19,11 +19,10 @@ Tech-Cosmos OS Input System 是一个专为 Unity 项目设计的、灵活且可
 ```
 Tech-Cosmos.OS.InputSystem/
 └── Runtime/
-    ├── InputBinding.cs      # 组合键数据结构，支持修饰键与双键组合。
     ├── InputConfig.cs       # ScriptableObject 配置文件，用于存储所有动作的默认按键列表。
     ├── InputManager.cs      # 核心管理器，处理按键注册、重绑定、持久化及输入查询。
     ├── KeyBindingUI.cs      # UI 组件，用于在游戏中显示并动态重绑定单个按键。
-    └── KeyConfig.cs         # 数据结构，定义了一个动作名与按键/组合键的配对。
+    └── KeyConfig.cs         # 数据结构，含 InputBinding / ModifierKey 与动作名配对。
 ```
 
 ## 快速开始
