@@ -202,9 +202,9 @@ namespace TechCosmos.InputSystem.Runtime
         {
             switch (keyCode)
             {
-                case KeyCode.Mouse0: return "鼠标左键";
-                case KeyCode.Mouse1: return "鼠标右键";
-                case KeyCode.Mouse2: return "鼠标中键";
+                case KeyCode.Mouse0: return "Left Mouse";
+                case KeyCode.Mouse1: return "Right Mouse";
+                case KeyCode.Mouse2: return "Middle Mouse";
                 default: return keyCode.ToString();
             }
         }

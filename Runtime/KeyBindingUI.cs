@@ -28,7 +28,7 @@ namespace TechCosmos.InputSystem.Runtime
 
             if (inputManager == null)
             {
-                Debug.LogError("场景中未找到 InputManager！");
+                Debug.LogError("InputManager not found in scene.");
                 return;
             }
 
@@ -47,6 +47,12 @@ namespace TechCosmos.InputSystem.Runtime
             {
                 inputManager.OnKeyRebinded -= HandleKeyRebinded;
             }
+        }
+
+        public void SetActionName(string newActionName)
+        {
+            actionName = newActionName;
+            UpdateKeyDisplay();
         }
 
         private void HandleKeyRebinded(string name, InputBinding newBinding)
@@ -96,15 +102,15 @@ namespace TechCosmos.InputSystem.Runtime
                 bindButton.interactable = false;
 
             if (keyText != null)
-                keyText.text = "等待按键...";
+                keyText.text = "Waiting for input...";
 
             yield return null;
 
-            while (!Input.anyKeyDown)
+            while (!Input.anyKeyDown && !IsMouseButtonDown())
             {
                 if (Input.GetKeyDown(KeyCode.Escape))
                 {
-                    Debug.Log("取消按键绑定");
+                    Debug.Log("Key binding cancelled.");
                     CancelListening();
                     UpdateKeyDisplay();
                     yield break;
@@ -121,7 +127,7 @@ namespace TechCosmos.InputSystem.Runtime
             }
             else
             {
-                Debug.LogWarning("未能捕获有效按键组合，请重试。");
+                Debug.LogWarning("Failed to capture valid input, ignoring.");
             }
 
             UpdateKeyDisplay();
@@ -129,6 +135,11 @@ namespace TechCosmos.InputSystem.Runtime
 
             if (bindButton != null)
                 bindButton.interactable = true;
+        }
+
+        private bool IsMouseButtonDown()
+        {
+            return Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1) || Input.GetMouseButtonDown(2);
         }
 
         private InputBinding CaptureInputBinding()
@@ -141,19 +152,29 @@ namespace TechCosmos.InputSystem.Runtime
                 {
                     if (IsIgnoredKey(key))
                     {
-                        Debug.LogWarning($"不支持绑定按键: {key}");
+                        Debug.LogWarning($"Key binding blocked: {key}");
                         continue;
                     }
 
                     if (InputBinding.KeyCodeToModifier(key) != ModifierKey.None)
                     {
-                        Debug.LogWarning("不能只绑定修饰键，请同时按下主键。");
+                        Debug.LogWarning("Modifier keys alone cannot be bound.");
                         return InputBinding.FromKeyCode(KeyCode.None);
                     }
 
                     pressedKey = key;
                     break;
                 }
+            }
+
+            if (pressedKey == KeyCode.None)
+            {
+                if (Input.GetMouseButtonDown(0))
+                    pressedKey = KeyCode.Mouse0;
+                else if (Input.GetMouseButtonDown(1))
+                    pressedKey = KeyCode.Mouse1;
+                else if (Input.GetMouseButtonDown(2))
+                    pressedKey = KeyCode.Mouse2;
             }
 
             if (pressedKey == KeyCode.None)
@@ -209,6 +230,14 @@ namespace TechCosmos.InputSystem.Runtime
             if (inputManager != null)
             {
                 inputManager.ResetKeyToDefault(actionName);
+            }
+        }
+
+        public void UnbindKey()
+        {
+            if (inputManager != null)
+            {
+                inputManager.UnbindKey(actionName);
             }
         }
     }

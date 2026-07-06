@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 namespace TechCosmos.InputSystem.Runtime
 {
     [CreateAssetMenu(menuName = "Tech-Cosmos/Input/Config", fileName = "New Input Config")]
@@ -8,4 +9,3 @@ namespace TechCosmos.InputSystem.Runtime
         public List<KeyConfig> keyConfigs = new List<KeyConfig>();
     }
 }
-

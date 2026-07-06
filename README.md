@@ -1,159 +1,554 @@
-﻿# Tech-Cosmos OS Input System
+﻿# Tech-Cosmos Input System
 
-## 概述
+一个轻量级、可扩展的 Unity 按键绑定系统，支持静态预设按键和运行时动态增删按键，附带完整的改键 UI 组件。
 
-Tech-Cosmos OS Input System 是一个专为 Unity 项目设计的、灵活且可扩展的输入管理模块。它允许开发者在编辑器中直观地配置默认按键，并支持在运行时通过 UI 动态地重新绑定按键。系统会自动将用户的自定义按键配置以 JSON 格式保存到本地，并在下次启动时加载。
+---
 
-## 主要特性
+## 目录
 
-*   **可配置的默认按键**：通过 `ScriptableObject` 集中管理所有动作的默认按键绑定。
-*   **运行时按键重绑定**：提供简洁的 UI 组件，允许玩家在游戏内自由更改按键。
-*   **冲突检测**：在绑定新按键时，自动检测并避免与其他已绑定的动作发生冲突。
-*   **本地持久化**：按键配置会自动保存为 JSON 文件，并在游戏启动时加载。
-*   **事件驱动**：当按键绑定发生变更时，会触发全局事件，方便其他系统响应。
-*   **组合键支持**：支持修饰键组合（如 `Alt + X`、`Ctrl + Shift + C`）以及双键组合（如 `A + 鼠标左键`）。
-*   **易于集成**：单例模式的 `InputManager` 可方便地在任何脚本中调用，获取输入状态。
+- [特性](#特性)
+- [文件结构](#文件结构)
+- [快速开始](#快速开始)
+- [核心概念](#核心概念)
+- [API 参考](#api-参考)
+- [使用示例](#使用示例)
+- [高级用法](#高级用法)
+- [常见问题](#常见问题)
+
+---
+
+## 特性
+
+- **静态按键**：通过 ScriptableObject 预设，Inspector 可视化配置
+- **动态按键**：运行时通过 API 增删，不修改 ScriptableObject
+- **统一 API**：静态和动态按键使用完全相同的接口检测输入
+- **改键系统**：支持运行时重新绑定，自动检测冲突
+- **组合键**：支持 Ctrl/Alt/Shift 修饰键和双键组合
+- **鼠标支持**：支持鼠标左/中/右键
+- **持久化**：自动保存/加载按键配置到 JSON 文件
+- **UI 组件**：开箱即用的 KeyBindingUI，支持绑定/取消/重置
+- **事件驱动**：按键增删改均有事件通知，方便 UI 自动更新
+
+---
 
 ## 文件结构
 
 ```
 Tech-Cosmos.OS.InputSystem/
 └── Runtime/
-    ├── InputConfig.cs       # ScriptableObject 配置文件，用于存储所有动作的默认按键列表。
-    ├── InputManager.cs      # 核心管理器，处理按键注册、重绑定、持久化及输入查询。
-    ├── KeyBindingUI.cs      # UI 组件，用于在游戏中显示并动态重绑定单个按键。
-    └── KeyConfig.cs         # 数据结构，含 InputBinding / ModifierKey 与动作名配对。
+    ├── InputConfig.cs      # ScriptableObject 配置文件
+    ├── KeyConfig.cs        # InputBinding 结构体、ModifierKey 枚举、KeyConfig 结构体
+    ├── InputManager.cs     # 核心管理器（单例）
+    └── KeyBindingUI.cs     # 改键 UI 组件
 ```
+
+---
 
 ## 快速开始
 
 ### 1. 创建配置文件
 
-1.  在 Unity 编辑器的 `Project` 窗口中，右键点击并选择 **Create → Tech-Cosmos → Input → Config**。
-2.  将其命名为，例如 `PlayerInputConfig`。
-3.  在 `Inspector` 窗口中，设置 `Key Configs` 列表的大小，并添加你的动作（如 "Jump"、"Fire"、"Interact" 等），为每个动作配置 `Binding` 字段。
+在 Unity 中右键 → `Create → Tech-Cosmos → Input → Config`，创建 `InputConfig`。
 
-**单键绑定：** 只设置 `Binding → Key`，`Modifiers` 与 `Combo Key` 留空。
+在 Inspector 中配置预设按键：
 
-**组合键绑定：**
+```
+Key Configs:
+  - Name: "Jump"     Binding: Space
+  - Name: "Fire"     Binding: Mouse0
+  - Name: "Reload"   Binding: R
+```
 
-| 字段 | 说明 |
-| :--- | :--- |
-| `Key` | 主键（触发键），如 `X`、`Mouse0` |
-| `Modifiers` | 修饰键标志，可多选 `Control`、`Alt`、`Shift` |
-| `Combo Key` | 额外组合键，如 `A`（与主键同时按住时生效） |
+### 2. 挂载 InputManager
 
-**示例 `KeyConfig` 结构：**
+创建一个空 GameObject，命名为 `InputManager`，挂载 `InputManager` 组件，将刚才创建的 `InputConfig` 拖入 `Config` 字段。
 
-| Name       | Binding 配置 |
-| :--------- | :----------- |
-| Jump       | Key=Space |
-| Fire       | Key=Mouse0 |
-| QuickSave  | Key=S, Modifiers=Alt |
-| SpecialAtk | Key=Mouse0, Combo Key=A |
-| Pause      | Key=Escape |
-
-### 2. 设置 InputManager
-
-1.  在场景中创建一个空的 `GameObject`。
-2.  为其添加 `InputManager` 组件。
-3.  将第 1 步创建的 `InputConfig` 文件拖拽到 `InputManager` 的 `Config` 字段上。
-
-`InputManager` 会在 `Awake` 中自动将自己设置为单例且跨场景不销毁（`DontDestroyOnLoad`）。
-
-### 3. 创建按键绑定 UI（可选）
-
-1.  在 `Canvas` 下创建一个 `Panel`，用于放置按键绑定入口。
-2.  为其添加 `KeyBindingUI` 组件。
-3.  在 `Inspector` 中配置该组件：
-    *   **Action Name**：填入你要它控制的动作名，例如 "Jump"。
-    *   **Key Text**：拖入一个用于显示当前按键的 `Text` 或 `TextMeshProUGUI` 组件。
-    *   **Bind Button**：拖入一个用于触发重绑定的 `Button` 组件。
-    *   **Ignored Keys**：可选，添加在监听时希望忽略的按键（默认仅忽略 `None`）。鼠标按键现已可用于组合键绑定。
-    *   **On Key Rebinded** / **On Listening State Changed**：可选，绑定你自己的 UnityEvent 以响应事件。
-
-当玩家点击 **Bind Button** 时，`KeyBindingUI` 会进入监听状态，等待玩家按下新按键，完成后自动更新 UI 并保存配置。
-
-### 4. 在脚本中查询输入
-
-在任何继承自 `MonoBehaviour` 的脚本中，你都可以通过单例实例来查询输入，无需单独引用。
+### 3. 检测输入
 
 ```csharp
 using TechCosmos.InputSystem.Runtime;
-using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    private void Update()
+    void Update()
     {
-        // 持续按键（例如：移动）
+        // 持续按住
         if (InputManager.Instance.GetKey("Jump"))
         {
-            Debug.Log("跳跃键被按住");
+            HoldJump();
         }
 
-        // 按下瞬间（例如：开火）
+        // 按下瞬间（最常用）
         if (InputManager.Instance.GetKeyDown("Fire"))
         {
-            Debug.Log("开火键刚按下！");
+            Shoot();
         }
 
-        // 抬起瞬间
-        if (InputManager.Instance.GetKeyUp("Pause"))
+        // 松开瞬间
+        if (InputManager.Instance.GetKeyUp("Reload"))
         {
-            Debug.Log("暂停键被松开，切换暂停状态");
+            FinishReload();
         }
     }
 }
 ```
 
-## 核心 API 参考
+---
+
+## 核心概念
+
+### 静态按键 vs 动态按键
+
+```
+┌─────────────────────────────────────────────────┐
+│                  InputManager                    │
+│                                                  │
+│  ┌──────────────────┐   ┌──────────────────┐    │
+│  │  staticBindings  │   │ dynamicBindings  │    │
+│  │                  │   │                  │    │
+│  │ Jump    → Space  │   │ Skill_0 → Alpha1 │    │
+│  │ Fire    → Mouse0 │   │ Skill_1 → Alpha2 │    │
+│  │ Reload  → R      │   │ Slot_0  → Q      │    │
+│  └──────────────────┘   └──────────────────┘    │
+│         ↑                       ↑                │
+│    从 SO 加载             运行时 API 创建         │
+│    可重置默认值            有独立默认值           │
+│    不修改 SO              不修改 SO              │
+└─────────────────────────────────────────────────┘
+```
+
+| 特性 | 静态按键 | 动态按键 |
+|------|---------|---------|
+| 创建方式 | Inspector 配置 SO | `AddDynamicAction()` |
+| 删除方式 | 修改 SO | `RemoveDynamicAction()` |
+| 修改 SO？ | 否 | 否 |
+| 重置默认 | ✅ | ✅ |
+| 持久化 | ✅ | ✅ |
+| 冲突检测 | ✅ | ✅ |
+
+### 动作命名规则
+
+- 静态按键：名称与 SO 中的 `KeyConfig.name` 一致，如 `"Jump"`、`"Fire"`
+- 动态按键：格式为 `"{分类}_{名称}"`，如 `"Skills_Fireball"`、`"Inventory_Slot_0"`
+
+---
+
+## API 参考
 
 ### InputManager
 
-| 方法 / 属性 | 说明 |
-| :--- | :--- |
-| `Instance` | 静态单例访问点。 |
-| `Config` | 获取当前关联的 `InputConfig` 资产。 |
-| `GetKey(string name)` | 返回指定动作的按键是否**被按住**。 |
-| `GetKeyDown(string name)` | 返回指定动作的按键是否在**当前帧按下**。 |
-| `GetKeyUp(string name)` | 返回指定动作的按键是否在**当前帧抬起**。 |
-| `GetBinding(string name)` | 返回指定动作当前绑定的 `InputBinding`（含修饰键与组合键）。 |
-| `GetKeyCode(string name)` | 返回指定动作当前绑定的主键 `KeyCode`。 |
-| `RebindKey(string name, InputBinding newBinding)` | 重新绑定指定动作的组合键，默认会进行冲突检测。 |
-| `RebindKey(string name, KeyCode newKey)` | 重新绑定为单键（不含修饰键），兼容旧 API。 |
-| `IsBindingAlreadyBound(InputBinding binding)` | 检测组合键是否已被其他动作占用。 |
-| `ResetToDefault()` | 将所有动作的按键重置为 `InputConfig` 中定义的默认值，并删除存档。 |
-| `ResetKeyToDefault(string name)` | 仅将指定动作的按键重置为默认值，并保存。 |
-| `SaveBindings()` | 手动保存当前所有按键绑定到本地文件。 |
-| `LoadBindings()` | 从本地文件加载并覆盖当前按键绑定。 |
-| `GetAllActionNames()` | 返回所有已注册动作名的列表。 |
-| `GetAllBindings()` | 返回当前所有动作及其 `InputBinding` 的字典副本。 |
-| `GetAllKeyCodes()` | 返回当前所有动作及其主键 `KeyCode` 的字典副本。 |
+#### 属性
+
+```csharp
+// 获取配置引用
+InputConfig Config { get; }
+```
+
+#### 动态按键管理
+
+```csharp
+// 添加动态按键，返回完整动作名
+// category: 分类名（如 "Skills"）
+// actionName: 动作名（如 "Fireball"）
+// defaultKey: 默认按键
+// 返回值: 完整动作名（如 "Skills_Fireball"）
+string AddDynamicAction(string category, string actionName, KeyCode defaultKey)
+
+// 移除动态按键
+void RemoveDynamicAction(string actionName)
+
+// 判断动作类型
+bool IsDynamicAction(string actionName)
+bool IsStaticAction(string actionName)
+```
+
+#### 改键
+
+```csharp
+// 重新绑定按键（InputBinding 版本）
+// checkConflicts: 是否检测冲突，默认 true
+void RebindKey(string name, InputBinding newBinding, bool checkConflicts = true)
+
+// 重新绑定按键（KeyCode 版本，快捷方式）
+void RebindKey(string name, KeyCode newKey, bool checkConflicts = true)
+
+// 取消绑定（设为 KeyCode.None）
+void UnbindKey(string name)
+```
+
+#### 重置
+
+```csharp
+// 重置所有按键到默认值（静态+动态）
+void ResetToDefault()
+
+// 重置单个按键到默认值
+void ResetKeyToDefault(string name)
+```
+
+#### 冲突检测
+
+```csharp
+// 检测绑定是否已被其他动作使用
+// excludeAction: 排除的动作名（改键时排除自身）
+bool IsBindingAlreadyBound(InputBinding binding, string excludeAction = null)
+
+// 检测按键是否已被使用（快捷方式）
+bool IsKeyAlreadyBound(KeyCode key, string excludeAction = null)
+
+// 获取使用该绑定的动作名
+string GetActionNameByBinding(InputBinding binding)
+string GetActionNameByKey(KeyCode key)
+```
+
+#### 输入检测
+
+```csharp
+// 持续按住
+bool GetKey(string name)
+
+// 按下瞬间
+bool GetKeyDown(string name)
+
+// 松开瞬间
+bool GetKeyUp(string name)
+```
+
+#### 查询
+
+```csharp
+// 获取绑定信息
+InputBinding GetBinding(string name)
+KeyCode GetKeyCode(string name)
+
+// 获取所有动作名
+List<string> GetAllActionNames()
+List<string> GetDynamicActionNames()
+List<string> GetStaticActionNames()
+
+// 获取所有绑定
+Dictionary<string, InputBinding> GetAllBindings()
+```
+
+#### 持久化
+
+```csharp
+// 保存到文件（自动调用，也可手动调用）
+void SaveBindings()
+
+// 从文件加载
+void LoadBindings()
+
+// 删除存档
+void ClearSavedBindings()
+```
+
+#### 事件
+
+```csharp
+// 按键被重新绑定
+event Action<string, InputBinding> OnKeyRebinded
+
+// 动态按键被添加
+event Action<string> OnActionAdded
+
+// 动态按键被移除
+event Action<string> OnActionRemoved
+```
+
+### InputBinding
+
+```csharp
+// 属性
+KeyCode key;           // 主按键
+ModifierKey modifiers; // 修饰键（Ctrl/Alt/Shift 可组合）
+KeyCode comboKey;      // 组合键（双键组合）
+bool IsEmpty;          // 是否为空绑定
+
+// 静态方法
+static InputBinding FromKeyCode(KeyCode keyCode)
+static ModifierKey GetHeldModifiers()
+static bool IsModifierKeyCode(KeyCode key)
+static ModifierKey KeyCodeToModifier(KeyCode key)
+
+// 实例方法
+bool IsPressed()             // 是否持续按住
+bool WasPressedThisFrame()   // 是否本帧按下
+bool WasReleasedThisFrame()  // 是否本帧松开
+string GetDisplayName()      // 显示名（如 "Ctrl + W"）
+```
+
+### ModifierKey
+
+```csharp
+[Flags]
+public enum ModifierKey
+{
+    None    = 0,
+    Control = 1 << 0,  // 1
+    Alt     = 1 << 1,  // 2
+    Shift   = 1 << 2,  // 4
+    // 可以组合: Control | Shift = 5
+}
+```
 
 ### KeyBindingUI
 
-| 成员 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| `actionName` | `string` | 本 UI 组件所控制的动作名。 |
-| `keyText` | `Text` | 用于显示当前按键的 UI 文本。 |
-| `bindButton` | `Button` | 点击后开始监听新按键的按钮。 |
-| `ignoredKeys` | `KeyCode[]` | 监听时需要忽略的按键数组。 |
-| `onKeyRebinded` | `UnityEvent<string, InputBinding>` | 按键重绑定成功时触发。 |
-| `onListeningStateChanged` | `UnityEvent<bool>` | 监听状态改变时触发。 |
-| `StartListening()` | 方法 | 公开方法，可手动调用以开始监听按键。 |
-| `CancelListening()` | 方法 | 公开方法，可手动调用以取消监听。 |
-| `ResetToDefault()` | 方法 | 公开方法，可手动调用以将此动作按键重置为默认。 |
+```csharp
+// 序列化字段
+string actionName;           // 监听的动作名
+Text keyText;                // 显示按键的 Text
+Button bindButton;           // 触发改键的 Button
+KeyCode[] ignoredKeys;       // 忽略的按键列表
 
-## 工作流程与架构
+// 事件
+UnityEvent<string, InputBinding> onKeyRebinded;
+UnityEvent<bool> onListeningStateChanged;
 
-1.  **初始化**：`InputManager` 在 `Awake` 时，从 `InputConfig` 读取所有默认按键进行注册。
-2.  **加载存档**：之后立即尝试从 `Application.persistentDataPath/keybindings.json` 加载玩家的自定义配置，覆盖默认值。
-3.  **运行时查询**：游戏代码通过 `InputManager` 的 `GetKey`、`GetKeyDown` 等方法，以**动作名**（而非具体按键）来查询输入状态，实现了按键与游戏逻辑的解耦。
-4.  **重绑定**：通过 `KeyBindingUI` 或直接调用 `InputManager.RebindKey`，更改内存中的映射关系。
-5.  **持久化**：重绑定操作会触发 `OnKeyRebinded` 事件，并在成功后将当前所有按键映射序列化并写入 JSON 文件。
+// 方法
+void SetActionName(string newActionName)  // 更换监听的动作
+void StartListening()                      // 开始监听按键
+void CancelListening()                     // 取消监听
+void UpdateKeyDisplay()                    // 刷新显示
+void ResetToDefault()                      // 重置到默认
+void UnbindKey()                           // 取消绑定
+```
 
-### JSON 存档格式示例
+---
+
+## 使用示例
+
+### 基础：检测输入
+
+```csharp
+void Update()
+{
+    if (InputManager.Instance.GetKeyDown("Jump"))
+    {
+        player.Jump();
+    }
+
+    if (InputManager.Instance.GetKeyDown("Fire"))
+    {
+        player.Shoot();
+    }
+}
+```
+
+### 改键
+
+```csharp
+// 简单改键
+InputManager.Instance.RebindKey("Jump", KeyCode.W);
+
+// 带修饰键的改键
+var binding = new InputBinding
+{
+    key = KeyCode.S,
+    modifiers = ModifierKey.Control,
+};
+InputManager.Instance.RebindKey("Save", binding);
+
+// 取消绑定
+InputManager.Instance.UnbindKey("Reload");
+```
+
+### 冲突检测
+
+```csharp
+// 改键前先检查
+if (InputManager.Instance.IsKeyAlreadyBound(KeyCode.E))
+{
+    string conflictAction = InputManager.Instance.GetActionNameByKey(KeyCode.E);
+    Debug.Log($"按键 E 已被 {conflictAction} 使用");
+}
+else
+{
+    InputManager.Instance.RebindKey("Interact", KeyCode.E);
+}
+```
+
+### 动态按键：技能系统
+
+```csharp
+public class SkillManager : MonoBehaviour
+{
+    private List<string> skillActions = new List<string>();
+
+    // 学习新技能
+    public void LearnSkill(string skillName)
+    {
+        string actionName = InputManager.Instance.AddDynamicAction(
+            "Skills",
+            skillName,
+            KeyCode.None  // 默认未绑定，让玩家自己设
+        );
+        skillActions.Add(actionName);
+
+        // 创建对应的 KeyBindingUI...
+    }
+
+    // 遗忘技能
+    public void ForgetSkill(string skillName)
+    {
+        string actionName = $"Skills_{skillName}";
+        InputManager.Instance.RemoveDynamicAction(actionName);
+        skillActions.Remove(actionName);
+
+        // 销毁对应的 KeyBindingUI...
+    }
+
+    void Update()
+    {
+        foreach (var action in skillActions)
+        {
+            if (InputManager.Instance.GetKeyDown(action))
+            {
+                UseSkill(action);
+            }
+        }
+    }
+}
+```
+
+### 动态按键：物品栏槽位
+
+```csharp
+public class InventoryHotbar : MonoBehaviour
+{
+    private const int MAX_SLOTS = 10;
+
+    void Start()
+    {
+        // 初始化 5 个槽位
+        for (int i = 0; i < 5; i++)
+        {
+            KeyCode defaultKey = KeyCode.Alpha1 + i;
+            InputManager.Instance.AddDynamicAction("Hotbar", $"Slot_{i}", defaultKey);
+        }
+    }
+
+    // 扩展槽位
+    public void AddSlot()
+    {
+        int count = InputManager.Instance.GetDynamicActionNames()
+            .FindAll(n => n.StartsWith("Hotbar_")).Count;
+
+        if (count < MAX_SLOTS)
+        {
+            InputManager.Instance.AddDynamicAction("Hotbar", $"Slot_{count}", KeyCode.None);
+        }
+    }
+
+    // 使用物品
+    void Update()
+    {
+        for (int i = 0; i < MAX_SLOTS; i++)
+        {
+            if (InputManager.Instance.GetKeyDown($"Hotbar_Slot_{i}"))
+            {
+                UseItem(i);
+            }
+        }
+    }
+}
+```
+
+### UI：动态创建改键面板
+
+```csharp
+public class DynamicBindingPanel : MonoBehaviour
+{
+    [SerializeField] private GameObject bindingUIPrefab;
+    [SerializeField] private Transform contentParent;
+
+    private Dictionary<string, KeyBindingUI> uiElements = new();
+
+    void Start()
+    {
+        InputManager.Instance.OnActionAdded += CreateBindingUI;
+        InputManager.Instance.OnActionRemoved += DestroyBindingUI;
+
+        // 为现有动态按键创建 UI
+        foreach (var name in InputManager.Instance.GetDynamicActionNames())
+        {
+            CreateBindingUI(name);
+        }
+    }
+
+    void CreateBindingUI(string actionName)
+    {
+        var obj = Instantiate(bindingUIPrefab, contentParent);
+        var ui = obj.GetComponent<KeyBindingUI>();
+        ui.SetActionName(actionName);
+        uiElements[actionName] = ui;
+    }
+
+    void DestroyBindingUI(string actionName)
+    {
+        if (uiElements.TryGetValue(actionName, out var ui))
+        {
+            Destroy(ui.gameObject);
+            uiElements.Remove(actionName);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (InputManager.Instance != null)
+        {
+            InputManager.Instance.OnActionAdded -= CreateBindingUI;
+            InputManager.Instance.OnActionRemoved -= DestroyBindingUI;
+        }
+    }
+}
+```
+
+### 重置
+
+```csharp
+// 重置全部
+InputManager.Instance.ResetToDefault();
+
+// 重置单个
+InputManager.Instance.ResetKeyToDefault("Jump");
+
+// 动态按键也可以重置
+InputManager.Instance.ResetKeyToDefault("Skills_Fireball");
+```
+
+---
+
+## 高级用法
+
+### 自定义 KeyBindingUI
+
+```csharp
+// 通过 UnityEvent 响应改键
+public class CustomBindingUI : MonoBehaviour
+{
+    [SerializeField] private KeyBindingUI bindingUI;
+    [SerializeField] private Text conflictWarning;
+
+    void Start()
+    {
+        bindingUI.onKeyRebinded.AddListener((name, binding) =>
+        {
+            Debug.Log($"{name} 已改为 {binding.GetDisplayName()}");
+        });
+
+        bindingUI.onListeningStateChanged.AddListener((isListening) =>
+        {
+            // 改键时禁用其他 UI
+            pauseMenu.SetActive(!isListening);
+        });
+    }
+}
+```
+
+### 序列化数据格式
+
+按键自动保存到 `Application.persistentDataPath/keybindings.json`：
 
 ```json
 {
@@ -162,37 +557,80 @@ public class PlayerController : MonoBehaviour
             "name": "Jump",
             "keyCode": 32,
             "modifiers": 0,
-            "comboKey": 0
+            "comboKey": 0,
+            "isDynamic": false
         },
         {
-            "name": "QuickSave",
-            "keyCode": 115,
-            "modifiers": 2,
-            "comboKey": 0
-        },
+            "name": "Skills_Fireball",
+            "keyCode": 49,
+            "modifiers": 4,
+            "comboKey": 0,
+            "isDynamic": true
+        }
+    ],
+    "dynamicDefaults": [
         {
-            "name": "SpecialAtk",
-            "keyCode": 323,
-            "modifiers": 0,
-            "comboKey": 97
+            "name": "Skills_Fireball",
+            "defaultKeyCode": 49
         }
     ]
 }
 ```
 
-（注：`keyCode` / `comboKey` 是 Unity `KeyCode` 枚举的整数值；`modifiers` 是 `ModifierKey` 标志位，如 `2` 代表 `Alt`。旧版仅含 `keyCode` 的存档仍可正常加载。）
+### 手动控制保存时机
 
-## 依赖项
+```csharp
+// 默认每次操作自动保存，如需批量操作后统一保存：
+InputManager.Instance.RebindKey("Jump", KeyCode.W);
+InputManager.Instance.RebindKey("Fire", KeyCode.E);
+InputManager.Instance.RebindKey("Reload", KeyCode.Q);
+InputManager.Instance.SaveBindings();  // 手动保存一次即可
+```
 
-*   **Unity Engine**：`UnityEngine` 核心命名空间。
-*   **Unity UI**：`UnityEngine.UI`（用于 `KeyBindingUI` 组件中的 `Text` 和 `Button`）。
-*   **System.IO**、**System.Collections**：.NET 标准库，用于文件操作和集合。
+---
 
-## 注意事项
+## 常见问题
 
-*   请确保场景中仅存在**一个**挂载了 `InputManager` 的 GameObject。如果存在多个，后创建的会自动销毁。
-*   `KeyBindingUI` 在监听按键时，按 `Escape` 键会取消本次重绑定操作。
-*   在重绑定冲突检测机制下，若新按键已绑定给其他动作，此次重绑定将失败，并输出警告。
-*   组合键查询逻辑：`GetKeyDown` 在**最后一个按下的键**触发时返回 true（修饰键需已按住）；`GetKey` 要求所有键同时按住；`GetKeyUp` 在任一组成键松开时返回 true。
-*   运行时重绑定时，按住修饰键再按主键即可绑定如 `Alt + X`；按住 `A` 再点鼠标左键即可绑定 `A + 鼠标左键`。
-*   若要支持与 Unity 新输入系统（Input System Package）类似的设备级处理，此模块需要额外扩展。
+### Q: 动态按键会修改 ScriptableObject 吗？
+
+**不会。** 动态按键存储在内存字典中，只持久化到 JSON 文件，ScriptableObject 始终只读。
+
+### Q: 如何区分静态和动态按键？
+
+```csharp
+InputManager.Instance.IsStaticAction("Jump")     // true（SO 配置）
+InputManager.Instance.IsDynamicAction("Skills_0") // true（运行时创建）
+```
+
+### Q: 动态按键能重置吗？
+
+**能。** 创建时记录的默认值会自动持久化，`ResetKeyToDefault` 对动态按键同样有效。
+
+### Q: 如何防止玩家把重要按键取消绑定？
+
+在 `KeyBindingUI` 的 `ignoredKeys` 中添加 `KeyCode.Escape` 等关键按键。也可以监听 `OnKeyRebinded` 事件进行业务层校验。
+
+### Q: 运行时创建的动态按键，重启游戏后还在吗？
+
+**在。** 所有按键（静态+动态）都保存到 `keybindings.json`，启动时自动加载。
+
+### Q: 可以监听手柄输入吗？
+
+当前版本只支持键盘和鼠标。如需手柄支持，可以扩展 `InputBinding` 添加设备类型字段。
+
+### Q: GetKeyDown 和 Input.GetKeyDown 有什么区别？
+
+`InputManager.Instance.GetKeyDown("Jump")` 会根据当前绑定自动判断按键，并且支持修饰键和组合键检测。
+
+---
+
+## 依赖
+
+- Unity 2019.4 或更高版本
+- 无需其他插件或包
+
+---
+
+## 许可证
+
+MIT License
