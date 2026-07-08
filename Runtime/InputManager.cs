@@ -451,6 +451,70 @@ namespace TechCosmos.InputSystem.Runtime
             return binding.WasReleasedThisFrame();
         }
 
+        // ========================================
+        // 新增 API：反向查询当前按下的动作
+        // ========================================
+
+        /// <summary>
+        /// 获取当前帧按下的第一个已配置动作名（包含静态和动态绑定，跳过修饰键）
+        /// </summary>
+        public string GetPressedActionThisFrame()
+        {
+            foreach (KeyCode keyCode in Enum.GetValues(typeof(KeyCode)))
+            {
+                if (Input.GetKeyDown(keyCode))
+                {
+                    // 跳过修饰键本身（Ctrl/Alt/Shift 单独按下不触发动作）
+                    if (InputBinding.IsModifierKeyCode(keyCode))
+                        continue;
+
+                    string actionName = GetActionNameByKey(keyCode);
+                    if (!string.IsNullOrEmpty(actionName))
+                        return actionName;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 获取当前帧按下的所有已配置动作名（包含静态和动态绑定，跳过修饰键）
+        /// </summary>
+        public List<string> GetPressedActionsThisFrame()
+        {
+            List<string> actions = new List<string>();
+
+            foreach (KeyCode keyCode in Enum.GetValues(typeof(KeyCode)))
+            {
+                if (Input.GetKeyDown(keyCode))
+                {
+                    if (InputBinding.IsModifierKeyCode(keyCode))
+                        continue;
+
+                    string actionName = GetActionNameByKey(keyCode);
+                    if (!string.IsNullOrEmpty(actionName))
+                        actions.Add(actionName);
+                }
+            }
+            return actions;
+        }
+
+        /// <summary>
+        /// 获取当前帧按下的第一个键的 KeyCode（不限于已配置的动作）
+        /// </summary>
+        public KeyCode GetPressedKeyThisFrame()
+        {
+            foreach (KeyCode keyCode in Enum.GetValues(typeof(KeyCode)))
+            {
+                if (Input.GetKeyDown(keyCode))
+                    return keyCode;
+            }
+            return KeyCode.None;
+        }
+
+        // ========================================
+        // 原有 API 继续
+        // ========================================
+
         public List<string> GetAllActionNames()
         {
             var names = new List<string>(staticBindings.Keys);
